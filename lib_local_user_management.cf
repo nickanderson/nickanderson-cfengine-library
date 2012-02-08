@@ -1,0 +1,38 @@
+bundle agent local_users_enforce_password (users) {
+# This bundle enforces a specific hashed password to be set in /etc/shadow
+# When the password is changed it also updates the 3rd filed (day last changed)
+# Generate Hash: echo "mypassword" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }'
+# Usage:
+# vars:
+#     users[root][passwdhash] string => "$1$EJrfeceC$9y4pFgc6x8p1Fcnfy1rus.";
+# methods:
+#     "any" usebundle => local_users_enforce_password('currentbundlename.users');
+#
+    vars:
+        linux::
+            "pwfile"        string  => "/etc/shadow";
+            "usersindex"    slist   => getindices("$(users)");
+            "days_since_epoch"
+                string => execresult("/usr/bin/perl -le 'print int time/(60*60*24)'", "noshell"),
+                comment => "Used for password aging, only needed if the users password is updated, otherwise dont waste time forking a process",
+                ifvarclass => "set_$(usersindex)_password";
+
+
+    files:
+        linux::
+            "$(pwfile)"
+                comment     => "Ensure password is set as expected",
+                edit_line   => set_user_field("$(usersindex)","2","$($(this.users)[$(this.usersindex)][passwdhash])"),
+                classes     => if_repaired("set_$(usersindex)_password");
+
+            "$(pwfile)"
+                comment     => "Update date of last password change with todays date expressed in days since epoch if the password is updated",
+                edit_line   => set_user_field("$(usersindex)","3","$(days_since_epoch)"),
+                ifvarclass  => "set_$(usersindex)_password";
+
+    reports:
+        linux.verbose_mode::
+            "$(usersindex) passwordhash in $(this.pwfile) set",
+                ifvarclass => "set_$(usersindex)_password";
+}
+
