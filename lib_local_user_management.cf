@@ -1,3 +1,17 @@
+# Get the latest version of this library: https://raw.github.com/nickanderson/nickanderson-cfengine-library/master/lib_local_user_management.cf
+# General Usage Guidelines
+# all of the bundels in this library adhear to the same variable declaration
+# format so as to be easily used together.
+# 
+#   vars:
+#       "users[testuser][gecos]"          string => "My Test User";
+#       "users[testuser][uid]"            string => "1500";
+#       "users[testuser][gid]"            string => "1500";
+#       "users[testuser][home]"           string => "/home/cmdln/tmp/testuserhome";
+#       "users[testuser][shell]"          string => "/sbin/nologin";
+#       "users[testuser][passwdhash]"     string => "testhash";
+
+
 bundle agent local_users_enforce_password (users) {
 # This bundle enforces a specific hashed password to be set in /etc/shadow
 # When the password is changed it also updates the 3rd filed (day last changed)
