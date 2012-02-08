@@ -3,6 +3,15 @@
 # all of the bundels in this library adhear to the same variable declaration
 # format so as to be easily used together.
 # 
+# Note on password hashes:
+# this perl oneliner should generate valid hashed passwords, replace MYPASSWORD
+# with your password. Be sure your system supports whatever encryption method
+# you choose. Thanks Scott Hunter <scott.hunter.iii@gmail.com> for the oneliners.
+# 
+#  For sha512: perl -e '@letters = ("A".."Z", "a".."z", "0".."9", "/", "."); $salt; for (0..85) { $salt .= $letters[rand@letters] } print crypt("MYPASSWORD", q[$6$] . $salt) . "\n";'
+#  For sha256: perl -e '@letters = ("A".."Z", "a".."z", "0".."9", "/", "."); $salt; for (0..42) { $salt .= $letters[rand@letters] } print crypt("MYPASSWORD", q[$5$] . $salt) . "\n";'
+#  For md5:    perl -e '@letters = ("A".."Z", "a".."z", "0".."9", "/", "."); $salt; for (0..21) { $salt .= $letters[rand@letters] } print crypt("MYPASSWORD", q[$1$] . $salt) . "\n";'
+# 
 #   vars:
 #       "users[testuser][gecos]"          string => "My Test User";
 #       "users[testuser][uid]"            string => "1500";
