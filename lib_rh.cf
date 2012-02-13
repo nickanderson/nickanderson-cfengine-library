@@ -1,0 +1,40 @@
+bundle agent rh_add_interface_routes(interface, routes) {
+# Expects string, array
+# vars:
+#    "management[172.18.43.0/24]"
+#        string => "172.18.43.0/24 via 10.124.4.254",
+#        comment => "Needed for communicating with monitoring cluster";
+#
+#    "management[10.119.156.0/26]"
+#        string => "10.119.156.0/26 via 10.124.4.254",
+#        comment => "Needed for talking to management interfaces on legacy
+#                   network";
+# methods:
+#    "any" usebundle => rh_add_routes("bond2", "main.management");
+#
+    classes:
+        "supported_os" or => { "centos_5", "redhat_5" };
+
+    vars:
+        "route_file"  string => "/etc/sysconfig/network-scripts/route-$(interface)";
+        "route_index" slist => getindices("$(routes)");
+
+    files:
+        (centos_5|redhat_5)::
+            "$(route_file)"
+                comment     => "Ensure routes are added properly",
+                create      => "true",
+                perms       => mog("644", "root", "root"),
+                edit_line   => append_if_no_line("$($(this.routes)[$(route_index)])"),
+                classes     => if_repaired("restart_network");
+
+    commands:
+        restart_network::
+            "/etc/init.d/network restart",
+                ifvarclass => "centos_5|redhat_5";
+
+    reports:
+        !supported_os::
+            "Sorry I don't know how to work with this OS";
+
+}
