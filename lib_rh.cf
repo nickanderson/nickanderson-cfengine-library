@@ -26,10 +26,10 @@ bundle agent rh_add_interface_routes(interface, routes) {
                 create      => "true",
                 perms       => mog("644", "root", "root"),
                 edit_line   => append_if_no_line("$($(this.routes)[$(route_index)])"),
-                classes     => if_repaired("restart_network");
+                classes     => if_repaired("route_add_restart_network");
 
     commands:
-        restart_network::
+        route_add_restart_network::
             "/etc/init.d/network restart",
                 ifvarclass => "centos_5|redhat_5";
 
@@ -85,4 +85,41 @@ bundle agent create_update_yum_repo(path) {
             comment    => "We need to update the metadata since a change was detected, but only once per run";
 
 
+}
+
+bundle agent set_selinux_disabled {
+# This bundle disables selinux
+# If its currently enabled, it disables it
+# It makes sure that it is configured to be disabled on next boot (via config file)
+# Note: If enabled currently this just sets it to permissive, so you will have
+#       extra logging until the next reboot.
+#
+    vars:
+        "config[SELINUX]"   string  => "disabled";
+
+        # If neither one of these is set, its the first pass, we only need to set this variable once
+        !(selinux_disabled|selinux_needs_disabled)::
+            "selinux_status"
+                string => execresult("/usr/sbin/getenforce", "noshell"),
+                policy => "overridable";
+
+    classes:
+        "selinux_disabled"  expression => regcmp("Permissive|Disabled", "$(selinux_status)");
+
+        "selinux_needs_disabled" not => "selinux_disabled";
+            
+
+    commands:
+        # Only set it once
+        # If its not disabled, but needs disabled do it and raise a class
+        !selinux_disabled::
+            "/usr/sbin/setenforce 0"
+                classes => "selinux_disabled",
+                ifvarclass  => "selinux_needs_disabled",
+                comment     => "Disable selinux, it causes issues without proper security
+                                contexts and sadly no one wants to spend time on that";
+    files:
+        "/etc/selinux/config"
+            edit_line => set_variable_values2("$(this.promiser)", "set_selinux_disabled.config"),
+            comment     => "Make disable persistent across reboot";
 }
