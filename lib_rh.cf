@@ -123,3 +123,70 @@ bundle agent set_selinux_disabled {
             edit_line => set_variable_values2("$(this.promiser)", "set_selinux_disabled.config"),
             comment     => "Make disable persistent across reboot";
 }
+
+bundle agent config_yum_client_repos(config){
+# Expects array with yum repo configurations
+#   vars:
+#       "setrepo[repositoryid][name]"                string => "RedHat 5 Updates";
+#       "setrepo[repositoryid][baseurl]"             string => "url://server1/path/to/repository/";
+#       "setrepo[repositoryid][metalink]"            string => "";
+#       "setrepo[repositoryid][mirrorlist]"          string => "";
+#       "setrepo[repositoryid][enabled]"             string => "";
+#       "setrepo[repositoryid][gpgcheck]"            string => "";
+#       "setrepo[repositoryid][repo_gpgcheck]"       string => "";
+#       "setrepo[repositoryid][gpgkey]"              string => "";
+#       "setrepo[repositoryid][gpgcakey]"            string => "";
+#       "setrepo[repositoryid][exclude]"             string => "";
+#       "setrepo[repositoryid][includepkgs]"         string => "";
+#       "setrepo[repositoryid][enablegroups]"        string => "";
+#       "setrepo[repositoryid][failovermethod]"      string => "";
+#       "setrepo[repositoryid][keepalive]"           string => "";
+#       "setrepo[repositoryid][timeout]"             string => "";
+#       "setrepo[repositoryid][http_caching]"        string => "";
+#       "setrepo[repositoryid][retries]"             string => "";
+#       "setrepo[repositoryid][throttle]"            string => "";
+#       "setrepo[repositoryid][bandwidth]"           string => "";
+#       "setrepo[repositoryid][sslcacert]"           string => "";
+#       "setrepo[repositoryid][sslverify]"           string => "";
+#       "setrepo[repositoryid][sslclientcert]"       string => "";
+#       "setrepo[repositoryid][metadata_expire]"     string => "";
+#       "setrepo[repositoryid][mirrorlist_expire]"   string => "";
+#       "setrepo[repositoryid][proxy]"               string => "";
+#       "setrepo[repositoryid][proxy_username]"      string => "";
+#       "setrepo[repositoryid][proxy_password]"      string => "";
+#       "setrepo[repositoryid][username]"            string => "";
+#       "setrepo[repositoryid][password]"            string => "";
+#       "setrepo[repositoryid][cost]"                string => "";
+#       "setrepo[repositoryid][skip_if_unavailable]" string => "";
+#
+#   methods:
+#       "any"   usebundle => config_yum_client_repos("context.setrepo");
+
+    vars:
+        # Hopefully someday getindices will support multidimensional arrays and we 
+        # can get rid of this valid_entries list.
+        "valid_entries" slist => { "name", "baseurl", "metalink", "mirrorlist",
+                                    "enabled", "gpgcheck", "repo_gpgcheck",
+                                    "gpgkey", "gpgcakey", "exclude", 
+                                    "includepkgs", "enablegroups", "failovermethod",
+                                    "keepalive", "timeout", "http_caching", "retries",
+                                    "throttle", "bandwidth", "sslcacert", "sslverify",
+                                    "sslclientcert", "metadata_expire", "mirrorlist_expire",
+                                    "proxy", "proxy_username", "username", "password", "cost",
+                                    "skip_if_unavailable", };
+        "repoids" slist => getindices("$(config)");
+    
+    files:
+        "/etc/yum.repos.d/$(repoids).repo"
+            create => "true",
+            edit_line   => prepend_if_no_line("[$(repoids)]");
+
+        # Using replace_or_add instead of set_variable_values2 here because we
+        # need to loop on the second dimension of the array and getindices does
+        # not currently support that, we use the valid_entries list instead.
+        "/etc/yum.repos.d/$(repoids).repo"
+            create => "true",
+            edit_line       => replace_or_add("$(valid_entries)=.*", "$(valid_entries)=$($(config)[$(repoids)][$(valid_entries)])"),
+            comment         => "Completely manage specific repo settings";
+
+}
