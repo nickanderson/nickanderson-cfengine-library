@@ -76,6 +76,70 @@ bundle agent rh_update_routes(ipregex, routes) {
 
         !supported_os::
             "Sorry I don't know how to work with this OS";
+}
+
+bundle agent rh_update_interface_settings(nic, config) {
+# expects string, array
+# nic: interface to operate on
+# config: configuration array containting keys that are valid options for 
+#         redhat style interface configuration
+#
+# note: this bundle only alters settings that have been directed, any other settings 
+#       in the file that are not managed will not be modifed.
+#
+#       
+# example usage:
+#    vars:
+#            "nics"              slist   => { "eth0", "eth1" };
+#
+#            # this would work, you will be limited to taking action and editing
+#            # interfaces that are already detected so its reccomended to manually
+#            # specify the nics as above
+#            #"nics"              slist   => getindices("sys.ipv4");
+#
+#            "eth0[DEVICE]"      string  => "eth0";
+#            "eth0[BOOTPROTO]"   string  => "none";
+#            "eth0[ONBOOT]"      string  => "yes";
+#            "eth0[IPADDR]"      string  => "192.168.35.11";
+#            "eth0[NETMASK]"     string  => "255.255.255.0";
+#
+#            "eth1[DEVICE]"      string  => "eth1";
+#            "eth1[BOOTPROTO]"   string  => "none";
+#            "eth1[ONBOOT]"      string  => "yes";
+#            "eth1[IPADDR]"      string  => "172.16.210.65";
+#            "eth1[NETMASK]"     string  => "255.255.255.192";
+#
+#
+#    methods:
+#
+#    "any" usebundle => rh_update_interface_settings("$(nics)", "main.$(nics)");
+
+
+    files:
+        #"/tmp/ifcfg-$(nic)"
+        "/etc/sysconfig/network-scripts/ifcfg-$(nic)"
+            comment         => "configure interface persistent settings",
+            edit_defaults   => no_backup,
+            create          => "true",
+            #perms           => mog("644", "root", "root"),
+            edit_line       => set_variable_values2("$(this.promiser)", "$(config)"),
+            classes         => if_repaired("ifupdown_$(nic)");
+
+    commands:
+        # todo: figure out how to limit this to a single up/down iteration
+        # should be able to use and() and not() with ifvarclass but 
+        # no such fncall "and()" in promise with 3.2.1 :(
+        "/bin/echo /sbin/ifdown $(nic)"
+            ifvarclass  => "ifupdown_$(nic)",
+            #ifvarclass  => and(not("downed_interface_$(nic)"), "ifupdown_$(nic)"),
+            classes     => if_repaired("downed_interface_$(nic)"),
+            comment     => "down the interface with old configuration";
+
+        "/bin/echo /sbin/ifup $(nic)"
+            ifvarclass  => "ifupdown_$(nics)",
+            #ifvarclass  => and(not("uped_interface_$(nic)"), "ifupdown_$(nic)"),
+            classes     => if_repaired("uped_interface_$(nic)"),
+            comment     => "bring up the interface with new configuration";
 
 }
 
