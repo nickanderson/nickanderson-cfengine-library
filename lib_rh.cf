@@ -48,12 +48,14 @@ bundle agent rh_update_routes(ipregex, routes) {
 
 
     files:
+        # We only want to add persistent routes to the interface that matches the ipregex so we ifvarclass on $(nics)_matches_ipregex
         (centos_5|redhat_5)::
             "/etc/sysconfig/network-scripts/route-$(nics)"
                 create      => "true",
                 perms       => mog("644", "root", "root"),
                 edit_line   => replace_or_add("$(route_index).*", "$(route_index) via $($(this.routes)[$(route_index)])"),
                 classes     => if_repaired("persistent_route_updated_for_$(route_index)"),
+                ifvarclass  => "$(nics)_matches_ipregex",
                 comment     => "Replace any conflicting routes and ensure persistent across reboots";
 
     commands:
