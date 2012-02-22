@@ -300,6 +300,23 @@ bundle agent config_yum_client_repos(config){
 
 }
 
+bundle agent rh_set_hostname(fqdn){
+# Expects string
+# You should be passing the canonical fqdn here, short hostnames are bad for your health
+
+    files:
+        centos_5|redhat_5::
+            "/etc/sysconfig/network"
+                edit_line => replace_or_add("HOSTNAME=.*", "HOSTNAME=$(fqdn)"),
+                classes   => if_repaired("update_running_hostname"),
+                comment   => "Set the system canonical hostname";
+
+    commands:
+        update_running_hostname::
+            "/bin/hostname $(fqdn)"
+                comment => "Update the hostname on the running system so we dont have to wait for a reboot";
+}
+
 bundle agent rh_remove_rhn_plugin{
 # This is a common function on many internal machines
 # It would be preferable to just disable the plugin, but 
