@@ -300,6 +300,15 @@ bundle agent config_yum_client_repos(config){
 
 }
 
+bundle agent rh_remove_rhn_plugin{
+# This is a common function on many internal machines
+# It would be preferable to just disable the plugin, but 
+# 3.2.1 is affected by a bug in select_region that may cause a segfault
+    packages:
+        "yum-rhn-plugin"
+            package_policy => "delete",
+            package_method => yum_rpm;
+}
 
 
 
