@@ -186,12 +186,14 @@ bundle agent rh_set_gateway(ip) {
 	    classes	    =>  if_repaired("set_persistent_default_gw"),
 	    comment	    =>  "Set default gateway in the expected location for redhat";
 
+    # We think we only want to do this on persistent default gateway repair
+    # it seems excessive to run all the time.
 	"/etc/sysconfig/network-scripts"
 	    file_select     => by_name("route-.*"),
 	    transformer     => "/bin/sed -i '/^default.*/d' $(this.promiser)",
 	    depth_search    => recurse("1"),
-        classes         => if_repaired("removed_gateway_wrong_location"),
-	    comment	        => "We only want default gateway defined in one place";
+        ifvarclass      => "set_persistent_default_gw",
+	    comment         => "We only want default gateway defined in one place";
 
     commands:
 	set_persistent_default_gw::
@@ -204,9 +206,6 @@ bundle agent rh_set_gateway(ip) {
     reports:
 	set_persistent_default_gw::
 	    "Fixed persistent default gateway in /etc/sysconfig/network. Set GATEWAY=$(ip)";
-
-    removed_gateway_wrong_location::
-        "Removed gateway defined in interface specific persistent route file";
 }
 
 
