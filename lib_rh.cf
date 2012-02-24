@@ -146,6 +146,37 @@ bundle agent rh_update_interface_settings(nic, config) {
 }
 
 
+bundle agent rh_set_gateway(ip) {
+# This bundle will set/update the default gateway 
+# It makes sure that the default gateway is only defined in one location
+
+    files:
+	"/etc/sysconfig/network"
+	    edit_line	=>  replace_or_add("^GATEWAY=.*$", "GATEWAY=$(ip)"),
+	    classes	=>  if_repaired("set_persistent_default_gw"),
+	    comment	=>  "Set default gateway in the expected location for redhat";
+
+	"/etc/sysconfig/network-scripts"
+	    file_select     => by_name("route-.*"),
+	    transformer     => "/bin/sed -i '/^default.*/d' $(this.promiser)",
+	    depth_search    => recurse("1"),
+        classes         => if_repaired("removed_gateway_wrong_location"),
+	    comment	        => "We only want default gateway defined in one place";
+
+    commands:
+	set_persistent_default_gw::
+	    "/sbin/ip route del default",
+		comment => "Remove current default gateway so we can set the new one";
+	    "/sbin/ip route add default via $(ip)",
+		comment => "Set default gateway now";
+
+    reports:
+	set_persistent_default_gw::
+	    "Fixed persistent default gateway in /etc/sysconfig/network. Set GATEWAY=$(ip)";
+
+    removed_gateway_wrong_location::
+        "Removed gateway defined in interface specific persistent route file";
+}
 
 
 bundle agent create_update_yum_repo(path) {
