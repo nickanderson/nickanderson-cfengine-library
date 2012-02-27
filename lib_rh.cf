@@ -348,14 +348,16 @@ bundle agent config_yum_client_repos(config){
     
     files:
         "/etc/yum.repos.d/$(repoids).repo"
-            create => "true",
-            edit_line   => prepend_if_no_line("[$(repoids)]");
+            create          => "true",
+            edit_defaults   => no_backup, 
+            edit_line       => prepend_if_no_line("[$(repoids)]");
 
         # Using replace_or_add instead of set_variable_values2 here because we
         # need to loop on the second dimension of the array and getindices does
         # not currently support that, we use the valid_entries list instead.
         "/etc/yum.repos.d/$(repoids).repo"
-            create => "true",
+            create          => "true",
+            edit_defaults   => no_backup, 
             edit_line       => replace_or_add("$(valid_entries)=.*", "$(valid_entries)=$($(config)[$(repoids)][$(valid_entries)])"),
             comment         => "Completely manage specific repo settings";
 
